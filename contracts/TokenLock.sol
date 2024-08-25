@@ -36,4 +36,3 @@ contract TokenLock is Ownable {
         require(token.transfer(msg.sender, amount), "Transfer failed");
     }
 }
-

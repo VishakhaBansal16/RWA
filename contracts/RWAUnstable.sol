@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract RWATOKEN is ERC20, Ownable {
-    uint256 private tokenValue; 
+    uint256 private tokenValue = 0.05 * 10 **18; //0.05 USDT; 
     uint256 public constant TOTAL_SUPPLY = 100 * 10**9 * 10**18;
 
     constructor() ERC20("Real World Asset Token", "RWATOKEN") Ownable(msg.sender) {

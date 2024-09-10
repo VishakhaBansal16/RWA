@@ -1,30 +1,91 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable2Step.sol";
+contract RWAUSD {
+    // ERC20 Variables
+    string public name = "Real World Asset USD";
+    string public symbol = "RWAUSD";
+    uint8 public decimals = 18;
+    uint256 public totalSupply;
 
-contract RWAUSD is ERC20, Ownable2Step {
-    constructor() ERC20("Real World Asset USD", "RWAUSD") {
-        // Optionally mint an initial supply, if needed
-        // _mint(msg.sender, initial_supply);
-    }
+    // Mapping for balances and allowances
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    // Ownership
+    address public owner;
 
     // Events
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
     event TokensMinted(address indexed to, uint256 amount);
     event TokensBurned(address indexed from, uint256 amount);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    // Function to mint new tokens
-    function mint(address to, uint256 amount) external onlyOwner {
-        _mint(to, amount);
-        emit TokensMinted(to, amount);
+    // Constructor to initialize the contract
+    constructor(uint256 initialSupply) {
+        owner = msg.sender; // Set deployer as owner
+        totalSupply = initialSupply * 10**uint256(decimals);
+        balanceOf[owner] = totalSupply; // Assign initial supply to the deployer
+        emit Transfer(address(0), owner, totalSupply);
     }
 
-    // Function to burn tokens from the caller's account
+    // Modifier to restrict functions to the owner
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not authorized");
+        _;
+    }
+
+    // Function to transfer ownership
+    function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "Invalid address");
+        emit OwnershipTransferred(owner, newOwner);
+        owner = newOwner;
+    }
+
+    // ERC20 Functions
+    function transfer(address to, uint256 value) external returns (bool success) {
+        require(balanceOf[msg.sender] >= value, "Insufficient balance");
+        _transfer(msg.sender, to, value);
+        return true;
+    }
+
+    function approve(address spender, uint256 value) external returns (bool success) {
+        allowance[msg.sender][spender] = value;
+        emit Approval(msg.sender, spender, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 value) external returns (bool success) {
+        require(value <= balanceOf[from], "Insufficient balance");
+        require(value <= allowance[from][msg.sender], "Allowance exceeded");
+        allowance[from][msg.sender] -= value;
+        _transfer(from, to, value);
+        return true;
+    }
+
+    function _transfer(address from, address to, uint256 value) internal {
+        require(to != address(0), "Invalid address");
+        balanceOf[from] -= value;
+        balanceOf[to] += value;
+        emit Transfer(from, to, value);
+    }
+
+    // Mint new tokens (only owner can mint)
+    function mint(address to, uint256 amount) external onlyOwner {
+        totalSupply += amount;
+        balanceOf[to] += amount;
+        emit TokensMinted(to, amount);
+        emit Transfer(address(0), to, amount);
+    }
+
+    // Burn tokens (only callable by the holder)
     function burn(uint256 amount) external {
-        require(balanceOf(msg.sender) >= amount, "Insufficient balance to burn");
-        _burn(msg.sender, amount);
+        require(balanceOf[msg.sender] >= amount, "Insufficient balance");
+        totalSupply -= amount;
+        balanceOf[msg.sender] -= amount;
         emit TokensBurned(msg.sender, amount);
+        emit Transfer(msg.sender, address(0), amount);
     }
 }
 
